@@ -70,4 +70,53 @@ defmodule D8 do
   def p1() do
     input() |> parse() |> calc_p1
   end
+
+  def up({x,y}), do: {x,y-1}
+  def down({x,y}), do: {x,y+1}
+  def left({x,y}), do: {x-1,y}
+  def right({x,y}), do: {x+1,y}
+
+  def view_score(map, start_coord) do
+    view_score_onedir(map, start_coord, &up/1)
+    * view_score_onedir(map, start_coord, &down/1)
+    * view_score_onedir(map, start_coord, &left/1)
+    * view_score_onedir(map, start_coord, &right/1)
+  end
+
+  def view_score_onedir(map, start_coord, dir_fn) do
+    initial_height = Map.get(map, start_coord)
+    {score, _} = view_score_onedir_impl(map, start_coord, dir_fn, {0, initial_height})
+    score
+  end
+
+  def view_score_onedir_impl(map, start_coord, dir_fn, {score_acc, block_height} = acc) do
+    new_coord = dir_fn.(start_coord)
+    case Map.get(map, new_coord) do
+      nil ->
+        acc  # Outside of map
+      height ->
+        if height >= block_height do
+          {score_acc + 1, block_height}
+        else
+          view_score_onedir_impl(map, new_coord, dir_fn, {score_acc + 1, block_height})
+        end
+    end
+  end
+
+  def highest_view_score(map) do
+    Enum.reduce(1..map.max, 0, fn x, max_score ->
+      Enum.reduce(1..map.max, max_score, fn y, max_score ->
+        case view_score(map, {x,y}) do
+          score when score > max_score ->
+            score
+          _ ->
+            max_score
+        end
+      end)
+    end)
+  end
+
+  def p2() do
+    D8.input |> D8.parse |> D8.highest_view_score
+  end
 end
