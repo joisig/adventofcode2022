@@ -71,7 +71,7 @@ defmodule D9 do
   def move(:left, {x,y}), do: {x-1, y}
   def move(:right, {x,y}), do: {x+1, y}
 
-  def perform_head_move({{hx,hy} = head, {tx,ty} = tail, visit_set}, {dir, count}) do
+  def perform_head_move({head, tail, visit_set}, {dir, count}) do
     case count do
       0 ->
         {head, tail, visit_set}
@@ -90,5 +90,34 @@ defmodule D9 do
 
   def p1() do
     D9.input |> D9.parse |> D9.simulate_rope |> elem(2) |> Enum.count
+  end
+
+  def perform_nine_moves({h, t1, t2, t3, t4, t5, t6, t7, t8, t9, visit_set} = acc, {dir, count}) do
+    case count do
+      0 ->
+        acc
+      _ ->
+        h = move(dir, h)
+        t1 = move_tail_if_needed(h, t1)
+        t2 = move_tail_if_needed(t1, t2)
+        t3 = move_tail_if_needed(t2, t3)
+        t4 = move_tail_if_needed(t3, t4)
+        t5 = move_tail_if_needed(t4, t5)
+        t6 = move_tail_if_needed(t5, t6)
+        t7 = move_tail_if_needed(t6, t7)
+        t8 = move_tail_if_needed(t7, t8)
+        t9 = move_tail_if_needed(t8, t9)
+        perform_nine_moves({h, t1, t2, t3, t4, t5, t6, t7, t8, t9, MapSet.put(visit_set, t9)}, {dir, count - 1})
+    end
+  end
+
+  def simulate_9knot_rope(moves) do
+    Enum.reduce(moves, {{0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, MapSet.new}, fn move, acc ->
+      perform_nine_moves(acc, move)
+    end)
+  end
+
+  def p2() do
+    D9.input |> D9.parse |> D9.simulate_9knot_rope |> elem(10) |> Enum.count
   end
 end
