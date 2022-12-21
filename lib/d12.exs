@@ -33,17 +33,18 @@ defmodule D12 do
   def left({x,y}), do: {x-1,y}
   def right({x,y}), do: {x+1,y}
 
+  # This is a reverse walk from the goal to the start as that
+  # eliminates possibilities more quickly (I think).
   def walk(current, goal, map, num_steps \\ 0, prev_height \\ 0, visited \\ [])
-  def walk(_, _, _, 500, _, _), do: 999999999999  # Guess at upper bound for search
   def walk(current, goal, map, num_steps, prev_height, visited) do
     if current in visited do
       999999999999
     else
-      if current == goal and map[current] <= prev_height + 1 do
+      if current == goal and map[current] >= prev_height - 1 do
         num_steps
       else
         case map[current] do
-          too_high when too_high > (prev_height + 1) ->
+          too_low when too_low < prev_height - 1 ->
             999999999999
           nil ->
             999999999999
@@ -65,6 +66,45 @@ defmodule D12 do
 
   def p1() do
     {start, goal, map} = input |> parse
-    walk(start, goal, map)
+    walk(goal, start, map)
+  end
+
+  def add_path_if_ok(paths, map, [current|_] = path, next, reached) do
+    if next in reached do
+      # No point in reaching a point now that was reached using
+      # a shorter path already.
+      paths
+    else
+      current_height = Map.get(map, current)
+      case Map.get(map, next) do
+        nil -> paths
+        too_high when too_high > current_height + 1 -> paths
+        _height ->
+          [[next|path]|paths]
+      end
+    end
+  end
+
+  def bfs(map, start, goal) do
+    Enum.reduce(1..10, {[[start]], MapSet.new |> MapSet.put(start)}, fn _ix, acc ->
+      bfs_impl(acc, map, goal)
+    end)
+  end
+
+  def bfs_impl({paths, reached}, map, goal) do
+    paths2 = Enum.reduce(paths, [], fn [current|_] = path, acc ->
+      acc
+      |> add_path_if_ok(map, path, up(current), reached)
+      |> add_path_if_ok(map, path, down(current), reached)
+      |> add_path_if_ok(map, path, left(current), reached)
+      |> add_path_if_ok(map, path, right(current), reached)
+    end)
+    |> Enum.sort(fn [lfirst|_], [rfirst|_] ->
+      map[lfirst] >= map[rfirst]
+    end)
+    reached2 = Enum.reduce(paths2, reached, fn [first|_], acc ->
+      MapSet.put(acc, first)
+    end)
+    {paths2, reached2}
   end
 end
