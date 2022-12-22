@@ -46,8 +46,8 @@ defmodule D16 do
     |> Enum.take(5000)
   end
 
-  def bfs(map) do
-    Enum.reduce(29..0, [{map, "AA", 0}], fn min_remain, acc ->
+  def bfs(map, num_steps \\ 30) do
+    Enum.reduce(num_steps-1..0, [{map, "AA", 0}], fn min_remain, acc ->
       bfs_step(acc, min_remain)
     end)
     |> Enum.take(1)
@@ -93,5 +93,59 @@ defmodule D16 do
   def p1() do
     map = input() |> parse()
     bfs(map)
+  end
+
+  def bfs2_step(paths, minutes_remaining_at_end_of_move) do
+    # The my_path and el_path are just for debugging and could be removed.
+    Enum.flat_map(paths, fn {map, my_location, el_location, my_path, el_path, pressure_released} ->
+      {my_loc_flow_rate, my_next_locations} = map[my_location]
+      {el_loc_flow_rate, el_next_locations} = map[el_location]
+
+      # Now we get the following options:
+      # - I open a valve, and the elephant opens a valve (if it's the same loc it's zero)
+      # - I open a valve, the elephant goes to one of its next places
+      # - The elephant opens a valve, I go to one of my next places
+      # - Each of us goes to one of our next places (for each place I can go to, enum
+      #   each place the elephant can go to)
+
+      both_map = Map.put(map, my_location, {0, my_next_locations})
+      {both_el_flow_rate, _} = both_map[el_location]
+      both_map = Map.put(both_map, el_location, {0, el_next_locations})
+      both_options = [{both_map, my_location, el_location, ["open"|my_path], ["open"|el_path],
+        pressure_released + minutes_remaining_at_end_of_move * (my_loc_flow_rate + both_el_flow_rate)}]
+
+      me_map = Map.put(map, my_location, {0, my_next_locations})
+      me_options = Enum.map(el_next_locations, fn el_next ->
+        {me_map, my_location, el_next, ["open"|my_path], [el_next|el_path], pressure_released + minutes_remaining_at_end_of_move * my_loc_flow_rate}
+      end)
+
+      el_map = Map.put(map, el_location, {0, el_next_locations})
+      el_options = Enum.map(my_next_locations, fn my_next ->
+        {el_map, my_next, el_location, [my_next|my_path], ["open"|el_path], pressure_released + minutes_remaining_at_end_of_move * el_loc_flow_rate}
+      end)
+
+      neither_map = map  # Neither one of us is opening a valve
+      neither_options = Enum.flat_map(my_next_locations, fn my_next ->
+        Enum.map(el_next_locations, fn el_next ->
+          {neither_map, my_next, el_next, [my_next|my_path], [el_next|el_path], pressure_released}
+        end)
+      end)
+
+      both_options ++ me_options ++ el_options ++ neither_options
+    end)
+    |> Enum.sort_by(&(&1 |> elem(5)), &>=/2)
+    |> Enum.take(100000)  # Had to take 3 guesses on AoC website before arriving at a large enough cut-off :)
+  end
+
+  def bfs2(map, num_steps \\ 26) do
+    Enum.reduce(num_steps-1..0, [{map, "AA", "AA", [], [], 0}], fn min_remain, acc ->
+      bfs2_step(acc, min_remain)
+    end)
+    |> Enum.take(1)
+  end
+
+  def p2() do
+    map = input() |> parse()
+    bfs2(map)
   end
 end
