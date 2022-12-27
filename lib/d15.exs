@@ -84,6 +84,7 @@ defmodule D15 do
     pairs = input() |> parse()
     beacons = Enum.map(pairs, fn {_, beacon} -> beacon end) |> Enum.into(MapSet.new)
     sensors_and_distances = Enum.map(pairs, fn {sensor, beacon} -> {sensor, manhattan_distance(sensor, beacon)} end)
+    IO.inspect sensors_and_distances, limit: :infinity
     {_, max_distance} = Enum.max_by(sensors_and_distances, fn {sensor, distance} -> distance end)
     {{min_x, _}, _} = Enum.min_by(pairs, fn {{x, _}, _} -> x end)
     {{max_x, _}, _} = Enum.max_by(pairs, fn {{x, _}, _} -> x end)
@@ -106,4 +107,68 @@ defmodule D15 do
       end
     end)
   end
+
+  # Some false negatives but will be used in a 2-dimensional binary search, so it's OK
+  def entire_square_within_range({x,y} = top_left, dimension, sensors_and_distances) do
+    half_dim = case dimension do
+      1 -> 0
+      _ -> ceil(dimension / 2)
+    end
+    mid = {x + half_dim, y + half_dim}
+    max_additional_distance = half_dim * 2
+    case Enum.any?(sensors_and_distances, fn {sensor, manhattan} ->
+      manhattan >= (manhattan_distance(sensor, mid) + max_additional_distance)
+    end) do
+      true -> true
+      false ->
+        case dimension do
+          1 -> IO.inspect {:result, x,y}
+          _ -> :ok
+        end
+        false
+    end
+  end
+
+  def p2() do
+    pairs = input() |> parse()
+    sensors_and_distances = Enum.map(pairs, fn {sensor, beacon} -> {sensor, manhattan_distance(sensor, beacon)} end)
+    p2_impl({0, 0}, 4000000, sensors_and_distances)
+  end
+
+  def p2_impl({x,y} = top_left, dimension, sensors_and_distances) do
+    case entire_square_within_range(top_left, dimension, sensors_and_distances) do
+      true ->
+        :not_here
+      false ->
+        first_half = ceil(dimension / 2)
+        second_half = dimension - ceil(dimension / 2)
+        tls = {x,y}
+        trs = {x + first_half, y}
+        bls = {x, y + first_half}
+        brs = {x + first_half, y + first_half}
+        tl = entire_square_within_range(tls, first_half, sensors_and_distances)
+        tr = entire_square_within_range(trs, second_half, sensors_and_distances)
+        bl = entire_square_within_range(bls, second_half, sensors_and_distances)
+        br = entire_square_within_range(brs, second_half, sensors_and_distances)
+        Enum.reduce([{tls, tl}, {trs, tr}, {bls, bl}, {brs, br}], :not_here, fn {square, result}, acc ->
+          case acc do
+            :not_here ->
+              case result do
+                :not_here ->
+                  :not_here
+                _ ->
+                  case {dimension, p2_impl(square, second_half, sensors_and_distances)} do
+                    {1, false} ->
+                      square
+                    {_, false} ->
+                      p2_
+                  end
+              end
+            _ ->
+              acc
+          end
+        end)
+    end
+  end
+
 end
