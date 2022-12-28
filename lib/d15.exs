@@ -116,23 +116,16 @@ defmodule D15 do
     end
     mid = {x + half_dim, y + half_dim}
     max_additional_distance = half_dim * 2
-    case Enum.any?(sensors_and_distances, fn {sensor, manhattan} ->
+    Enum.any?(sensors_and_distances, fn {sensor, manhattan} ->
       manhattan >= (manhattan_distance(sensor, mid) + max_additional_distance)
-    end) do
-      true -> true
-      false ->
-        case dimension do
-          1 -> IO.inspect {:result, x,y}
-          _ -> :ok
-        end
-        false
-    end
+    end)
   end
 
   def p2() do
     pairs = input() |> parse()
     sensors_and_distances = Enum.map(pairs, fn {sensor, beacon} -> {sensor, manhattan_distance(sensor, beacon)} end)
-    p2_impl({0, 0}, 4000000, sensors_and_distances)
+    {x, y} = p2_impl({0, 0}, 4000000, sensors_and_distances)
+    x * 4000000 + y
   end
 
   def p2_impl({x,y} = top_left, dimension, sensors_and_distances) do
@@ -140,29 +133,22 @@ defmodule D15 do
       true ->
         :not_here
       false ->
-        first_half = ceil(dimension / 2)
-        second_half = dimension - ceil(dimension / 2)
+        half = ceil(dimension / 2)
         tls = {x,y}
-        trs = {x + first_half, y}
-        bls = {x, y + first_half}
-        brs = {x + first_half, y + first_half}
-        tl = entire_square_within_range(tls, first_half, sensors_and_distances)
-        tr = entire_square_within_range(trs, second_half, sensors_and_distances)
-        bl = entire_square_within_range(bls, second_half, sensors_and_distances)
-        br = entire_square_within_range(brs, second_half, sensors_and_distances)
-        Enum.reduce([{tls, tl}, {trs, tr}, {bls, bl}, {brs, br}], :not_here, fn {square, result}, acc ->
+        trs = {x + half, y}
+        bls = {x, y + half}
+        brs = {x + half, y + half}
+        Enum.reduce([tls, trs, bls, brs], :not_here, fn square, acc ->
           case acc do
             :not_here ->
-              case result do
-                :not_here ->
+              result = entire_square_within_range(square, half, sensors_and_distances)
+              case {result, dimension} do
+                {false, 1} ->
+                  square
+                {true, _} ->
                   :not_here
-                _ ->
-                  case {dimension, p2_impl(square, second_half, sensors_and_distances)} do
-                    {1, false} ->
-                      square
-                    {_, false} ->
-                      p2_
-                  end
+                {false, _} ->
+                  p2_impl(square, half, sensors_and_distances)
               end
             _ ->
               acc
