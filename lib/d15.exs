@@ -129,32 +129,27 @@ defmodule D15 do
   end
 
   def p2_impl({x,y} = top_left, dimension, sensors_and_distances) do
-    case entire_square_within_range(top_left, dimension, sensors_and_distances) do
-      true ->
-        :not_here
-      false ->
-        half = ceil(dimension / 2)
-        tls = {x,y}
-        trs = {x + half, y}
-        bls = {x, y + half}
-        brs = {x + half, y + half}
-        Enum.reduce([tls, trs, bls, brs], :not_here, fn square, acc ->
-          case acc do
-            :not_here ->
-              result = entire_square_within_range(square, half, sensors_and_distances)
-              case {result, dimension} do
-                {false, 1} ->
-                  square
-                {true, _} ->
-                  :not_here
-                {false, _} ->
-                  p2_impl(square, half, sensors_and_distances)
-              end
-            _ ->
-              acc
+    half = ceil(dimension / 2)
+    tls = {x,y}
+    trs = {x + half, y}
+    bls = {x, y + half}
+    brs = {x + half, y + half}
+    Enum.reduce([tls, trs, bls, brs], :not_here, fn square, acc ->
+      case acc do
+        :not_here ->
+          result = entire_square_within_range(square, half, sensors_and_distances)
+          case {result, dimension} do
+            {false, 1} ->
+              square
+            {true, _} ->
+              :not_here
+            {false, _} ->
+              p2_impl(square, half, sensors_and_distances)
           end
-        end)
-    end
+        _ ->
+          acc
+      end
+    end)
   end
 
 end
