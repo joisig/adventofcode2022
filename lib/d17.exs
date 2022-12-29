@@ -115,7 +115,7 @@ defmodule D17 do
   end
 
   def visualize(map) do
-    Enum.map(max_y(map)..0, fn y ->
+    Enum.map(max_y(map)..max_y(map)-50, fn y ->
       IO.write("|")
       Enum.map(0..6, fn x ->
         case map[{x,y}] do
@@ -133,5 +133,26 @@ defmodule D17 do
     {_, map} = move_shapes(iterations, original_pushes)
     visualize(map)
     max_y(map) + 1
+  end
+
+  def flat_top(map) do
+    max_y = max_y(map)
+    map[{1,max_y}] == 1 and map[{0,max_y-1}] == 1 and map[{1,max_y-1}] == 1 and map[{2,max_y-1}] == 1 and map[{3,max_y-1}] == 1 and map[{4,max_y-1}] == 1 and map[{5,max_y-1}] == 1 and map[{6,max_y-1}] == 1
+  end
+
+  def find_flat({pushes, map}, original_pushes, index, prev_found_index) do
+    IO.inspect "Index #{index}"
+    shape_ix = rem(index, 5)
+    {pushes, map} = move_shape_to_rest({pushes, map}, original_pushes, shape_ix, shape_start(shape_ix, map))
+    if flat_top(map) and index > prev_found_index do
+      index + 1
+    else
+      find_flat({pushes, map}, original_pushes, index + 1, prev_found_index)
+    end
+  end
+
+  def do_find_flat(prev_found_index) do
+    original_pushes = input() |> parse()
+    find_flat({original_pushes, %{}}, original_pushes, 0, prev_found_index)
   end
 end
